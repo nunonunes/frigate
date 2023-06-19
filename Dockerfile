@@ -40,48 +40,48 @@ RUN wget -qO go2rtc "https://github.com/AlexxIT/go2rtc/releases/download/v1.5.0/
 #
 ####
 # Download and Convert OpenVino model
-FROM base_amd64 AS ov-converter
-ARG DEBIAN_FRONTEND
+#FROM base_amd64 AS ov-converter
+#ARG DEBIAN_FRONTEND
 
 # Install OpenVino Runtime and Dev library
-COPY requirements-ov.txt /requirements-ov.txt
-RUN apt-get -qq update \
-    && apt-get -qq install -y wget python3 python3-distutils \
-    && wget -q https://bootstrap.pypa.io/get-pip.py -O get-pip.py \
-    && python3 get-pip.py "pip" \
-    && pip install -r /requirements-ov.txt
+#COPY requirements-ov.txt /requirements-ov.txt
+#RUN apt-get -qq update \
+#    && apt-get -qq install -y wget python3 python3-distutils \
+#    && wget -q https://bootstrap.pypa.io/get-pip.py -O get-pip.py \
+#    && python3 get-pip.py "pip" \
+#    && pip install -r /requirements-ov.txt
 
 # Get OpenVino Model
-RUN mkdir /models \
-    && cd /models && omz_downloader --name ssdlite_mobilenet_v2 \
-    && cd /models && omz_converter --name ssdlite_mobilenet_v2 --precision FP16
+#RUN mkdir /models \
+#    && cd /models && omz_downloader --name ssdlite_mobilenet_v2 \
+#    && cd /models && omz_converter --name ssdlite_mobilenet_v2 --precision FP16
 
 
 # libUSB - No Udev
-FROM wget as libusb-build
-ARG TARGETARCH
-ARG DEBIAN_FRONTEND
+#FROM wget as libusb-build
+#ARG TARGETARCH
+#ARG DEBIAN_FRONTEND
 
 # Build libUSB without udev.  Needed for Openvino NCS2 support
-WORKDIR /opt
-RUN apt-get update && apt-get install -y unzip build-essential automake libtool
-RUN wget -q https://github.com/libusb/libusb/archive/v1.0.25.zip -O v1.0.25.zip && \
-    unzip v1.0.25.zip && cd libusb-1.0.25 && \
-    ./bootstrap.sh && \
-    ./configure --disable-udev --enable-shared && \
-    make -j $(nproc --all)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends libusb-1.0-0-dev && \
-    rm -rf /var/lib/apt/lists/*
-WORKDIR /opt/libusb-1.0.25/libusb
-RUN /bin/mkdir -p '/usr/local/lib' && \
-    /bin/bash ../libtool  --mode=install /usr/bin/install -c libusb-1.0.la '/usr/local/lib' && \
-    /bin/mkdir -p '/usr/local/include/libusb-1.0' && \
-    /usr/bin/install -c -m 644 libusb.h '/usr/local/include/libusb-1.0' && \
-    /bin/mkdir -p '/usr/local/lib/pkgconfig' && \
-    cd  /opt/libusb-1.0.25/ && \
-    /usr/bin/install -c -m 644 libusb-1.0.pc '/usr/local/lib/pkgconfig' && \
-    ldconfig
+#WORKDIR /opt
+#RUN apt-get update && apt-get install -y unzip build-essential automake libtool
+#RUN wget -q https://github.com/libusb/libusb/archive/v1.0.25.zip -O v1.0.25.zip && \
+#    unzip v1.0.25.zip && cd libusb-1.0.25 && \
+#    ./bootstrap.sh && \
+#    ./configure --disable-udev --enable-shared && \
+#    make -j $(nproc --all)
+#RUN apt-get update && \
+#    apt-get install -y --no-install-recommends libusb-1.0-0-dev && \
+#    rm -rf /var/lib/apt/lists/*
+#WORKDIR /opt/libusb-1.0.25/libusb
+#RUN /bin/mkdir -p '/usr/local/lib' && \
+#    /bin/bash ../libtool  --mode=install /usr/bin/install -c libusb-1.0.la '/usr/local/lib' && \
+#    /bin/mkdir -p '/usr/local/include/libusb-1.0' && \
+#    /usr/bin/install -c -m 644 libusb.h '/usr/local/include/libusb-1.0' && \
+#    /bin/mkdir -p '/usr/local/lib/pkgconfig' && \
+#    cd  /opt/libusb-1.0.25/ && \
+#    /usr/bin/install -c -m 644 libusb-1.0.pc '/usr/local/lib/pkgconfig' && \
+#    ldconfig
 
 FROM wget AS models
 
@@ -90,9 +90,9 @@ RUN wget -qO edgetpu_model.tflite https://github.com/google-coral/test_data/raw/
 RUN wget -qO cpu_model.tflite https://github.com/google-coral/test_data/raw/release-frogfish/ssdlite_mobiledet_coco_qat_postprocess.tflite
 COPY labelmap.txt .
 # Copy OpenVino model
-COPY --from=ov-converter /models/public/ssdlite_mobilenet_v2/FP16 openvino-model
-RUN wget -q https://github.com/openvinotoolkit/open_model_zoo/raw/master/data/dataset_classes/coco_91cl_bkgr.txt -O openvino-model/coco_91cl_bkgr.txt && \
-    sed -i 's/truck/car/g' openvino-model/coco_91cl_bkgr.txt
+#COPY --from=ov-converter /models/public/ssdlite_mobilenet_v2/FP16 openvino-model
+#RUN wget -q https://github.com/openvinotoolkit/open_model_zoo/raw/master/data/dataset_classes/coco_91cl_bkgr.txt -O openvino-model/coco_91cl_bkgr.txt && \
+#    sed -i 's/truck/car/g' openvino-model/coco_91cl_bkgr.txt
 
 
 
@@ -153,7 +153,7 @@ RUN mkdir -p /trt-wheels && pip3 wheel --wheel-dir=/trt-wheels -r requirements-t
 FROM scratch AS deps-rootfs
 COPY --from=nginx /usr/local/nginx/ /usr/local/nginx/
 COPY --from=go2rtc /rootfs/ /
-COPY --from=libusb-build /usr/local/lib /usr/local/lib
+#COPY --from=libusb-build /usr/local/lib /usr/local/lib
 COPY --from=s6-overlay /rootfs/ /
 COPY --from=models /rootfs/ /
 COPY docker/rootfs/ /
